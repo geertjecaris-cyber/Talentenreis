@@ -50,13 +50,22 @@ export const ROUTES: RouteData[] = [
     bgColor: '#ffe4e6',
     metafore: 'Zorgstad',
     description: 'Hier draait alles om mensen helpen, gezondheid en verzorging.',
-    tags: ['helpen', 'mensen', 'verzorgen', 'lief', 'doktertje', 'luisteren'],
+    tags: ['helpen', 'mensen', 'verzorgen', 'lief', 'doktertje', 'luisteren', 'voeding', 'uiterlijk'],
     jobs: [
       { id: 'nurse', title: 'Verpleegkundige', description: 'Je helpt zieke mensen in het ziekenhuis. Je geeft medicijnen en zorgt dat ze zich fijn voelen.', zone: 'Ziekenhuisheuvel' },
       { id: 'doctor', title: 'Arts', description: 'Je onderzoekt wat mensen mankeren en bedenkt een plan om ze beter te maken.', zone: 'Ziekenhuisheuvel' },
       { id: 'physio', title: 'Fysiotherapeut', description: 'Je helpt mensen weer goed bewegen als ze pijn hebben aan hun spieren.', zone: 'Ziekenhuisheuvel' },
       { id: 'dentist', title: 'Tandarts', description: 'Je controleert tanden en kiezen en maakt gaatjes weer heel.', zone: 'Ziekenhuisheuvel' },
       { id: 'pharmacist', title: 'Apotheker', description: 'Je maakt medicijnen klaar en legt mensen uit hoe ze die moeten gebruiken.', zone: 'Ziekenhuisheuvel' },
+      
+      // Voeding & Gezondheid
+      { id: 'dietitian', title: 'Diëtist', description: 'Je weet alles over eten. Je helpt mensen om gezonder te worden of af te vallen met goede voeding.', zone: 'Gezondheidscentrum' },
+      { id: 'lifestyle_coach', title: 'Leefstijlcoach', description: 'Je coacht mensen om gezonder te leven, meer te bewegen en goed te slapen.', zone: 'Gezondheidscentrum' },
+      
+      // Verzorging & Uiterlijk
+      { id: 'hairdresser', title: 'Kapper', description: 'Je knipt, kleurt en stylet haren zodat mensen zich mooi en verzorgd voelen.', zone: 'Wellness & Verzorging' },
+      { id: 'beautician', title: 'Schoonheidsspecialist', description: 'Je verzorgt de huid, nagels en make-up van mensen zodat ze kunnen ontspannen.', zone: 'Wellness & Verzorging' },
+
       { id: 'homecare', title: 'Thuiszorg medewerker', description: 'Je gaat bij mensen thuis langs om ze te wassen, aan te kleden en te helpen.', zone: 'Ouderenwijk' },
       { id: 'pedagogue', title: 'Pedagogisch Medewerker', description: 'Je werkt met kinderen op de opvang of school en zorgt voor een fijne sfeer.', zone: 'Kinderplein' },
       { id: 'logopedist', title: 'Logopedist', description: 'Je helpt kinderen en volwassenen om beter te praten en slikken.', zone: 'Kinderplein' },

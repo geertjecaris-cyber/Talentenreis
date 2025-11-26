@@ -45,21 +45,26 @@ export const generateMentorSummary = async (
   const context = buildContext(reflection, progress);
 
   const prompt = `
-    Je bent een inspirerende loopbaancoach voor leerlingen (12-16 jaar) en ISK-leerlingen.
+    Je bent een inspirerende loopbaancoach voor leerlingen (12-16 jaar).
     
     ${context}
 
-    Opdracht: Schrijf een mooi, persoonlijk 'Talentenprofiel'.
-    
-    Geef een diepgaande beschrijving van de persoonlijkheid en unieke krachten van deze leerling. Combineer de antwoorden tot een samenhangend verhaal. Leg verbanden tussen wie ze zijn, wat ze vroeger deden en waar ze nu energie van krijgen.
-    
-    Begin het verhaal met "Jij bent iemand die...".
-    
-    Belangrijk:
-    - Focus PUUR op de persoonlijkheid en talenten.
-    - Geef GEEN studieadvies of beroepskeuze-advies (dat komt later).
-    - Gebruik alinea's en witregels voor een nette, rustige opmaak.
-    - Gebruik GEEN hashtags (#) in de tekst.
+    Opdracht: Schrijf een compact en visueel aantrekkelijk 'Talentenprofiel'.
+    Gebruik EXACT deze structuur met de volgende **dikgedrukte koppen**:
+
+    **✨ Jouw Superkracht**
+    [Beschrijf hier in 2 zinnen wat deze leerling uniek maakt]
+
+    **⚡️ Hier ga jij van aan**
+    [Waar krijgt de leerling energie van? Wat vinden ze leuk?]
+
+    **🤝 Jouw Rol in een Team**
+    [Ben je een leider, een maker, een denker of een helper? Leg kort uit.]
+
+    **🚀 Tip van de Coach**
+    [Eén krachtige, positieve zin als afsluiting]
+
+    Schrijf direct tot de leerling ("Jij bent..."). Houd het positief en strak.
   `;
 
   try {
@@ -83,28 +88,35 @@ export const generateStudyAdvice = async (
   const context = buildContext(reflection, progress);
 
   const prompt = `
-    Je bent een expert op het gebied van opleidingen en beroepen voor jongeren (VMBO/MBO/HAVO niveau).
-    De doelgroep zijn leerlingen die Nederlands leren (B1 niveau), dus gebruik duidelijke taal.
+    Je bent een expert op het gebied van studiekeuze en loopbaanoriëntatie voor alle niveaus (MBO, HBO en WO).
+    Je spreekt een leerling aan die net zijn interesses heeft verkend. Houd de taal begrijpelijk (B1 niveau).
 
     ${context}
 
-    Opdracht: Geef concreet **Studie- en Toekomstadvies** op basis van het profiel hierboven.
+    Opdracht: Geef een helder en overzichtelijk **Studie- en Toekomstadvies**.
     
-    Verdeel je antwoord in drie duidelijke kopjes (zonder hashtags, gebruik dikgedrukte tekst of hoofdletters):
+    STRUCTUUR VAN JE ANTWOORD (Houd deze volgorde exact aan):
 
-    1. Welke profielen passen bij jou?
-    (Noem specifieke profielen zoals Zorg & Welzijn, Techniek, Economie & Ondernemen, etc. en leg kort uit waarom).
+    DEEL 1: TOP 3 HOOFDADVIEZEN
+    Geef direct de 3 beste richtingen/studies die bij deze leerling passen op basis van hun favoriete beroepen. 
+    Zet dit in een genummerde lijst (1. 2. 3.).
+    Zet direct hieronder de tekst: "===SPLIT==="
 
-    2. Mogelijke Opleidingen
-    (Geef voorbeelden van concrete opleidingen die ze later kunnen kiezen, bijv. Verzorgende IG, Software Developer, Commercieel Medewerker, etc.).
+    DEEL 2: VERDIEPING
+    Hierna volgt de rest van de uitleg. Gebruik de volgende koppen (dikgedrukt):
+    
+    1. Passende Profielen & Vakken
+    (Welke profielen op de middelbare school passen hierbij? Bijv. Economie & Maatschappij, Zorg & Welzijn).
+
+    2. Opleidingen Overzicht
+    (Geef een lijstje met specifieke opleidingen per niveau. Bijv. "MBO: ...", "HBO: ...").
 
     3. Jouw Toekomst
-    (Een korte, inspirerende zin over hoe hun toekomst eruit kan zien).
+    (Een korte, inspirerende afsluiting).
 
     Belangrijk:
-    - Gebruik een overzichtelijke opmaak met opsommingstekens.
+    - Wees concreet.
     - Geen hashtags (#).
-    - Houd het positief en bemoedigend.
   `;
 
   try {
