@@ -11,7 +11,9 @@ import {
   ThumbsDown, 
   HelpCircle, 
   Volume2,
-  BookOpen
+  BookOpen,
+  GraduationCap,
+  Sparkles
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -19,15 +21,16 @@ import { ViewState, ReflectionAnswers, UserProgress, RouteData, Job, Experiment 
 import { ROUTES, REFLECTION_QUESTIONS, getIcon } from './constants';
 import { Button } from './components/Button';
 import { speakText } from './services/ttsService';
-import { generateMentorSummary } from './services/geminiService';
+import { generateMentorSummary, generateStudyAdvice } from './services/geminiService';
 
 const INITIAL_REFLECTION: ReflectionAnswers = {
-  whoAmI: '',
+  whoAmI: [],
   likes: [],
-  goodAt: '',
-  childhood: '',
-  energy: '',
-  othersSay: ''
+  goodAt: [],
+  childhood: [],
+  energy: [],
+  othersSay: [],
+  customAnswers: {}
 };
 
 const INITIAL_PROGRESS: UserProgress = {
@@ -38,6 +41,97 @@ const INITIAL_PROGRESS: UserProgress = {
   experiments: []
 };
 
+// --- Extracted Components to fix focus issues ---
+
+interface ReflectionViewProps {
+  reflection: ReflectionAnswers;
+  onToggleOption: (field: keyof ReflectionAnswers, value: string) => void;
+  onUpdateCustom: (questionId: string, value: string) => void;
+  onNext: () => void;
+  onBack: () => void;
+}
+
+const ReflectionView: React.FC<ReflectionViewProps> = ({ 
+  reflection, 
+  onToggleOption, 
+  onUpdateCustom, 
+  onNext, 
+  onBack 
+}) => {
+  const [step, setStep] = useState(0);
+  const question = REFLECTION_QUESTIONS[step];
+  
+  // Helper to get array of selected options for current step
+  const selectedOptions = reflection[question.id as keyof ReflectionAnswers] as string[] || [];
+  const customText = reflection.customAnswers[question.id] || "";
+
+  const handleNext = () => {
+    if (step < REFLECTION_QUESTIONS.length - 1) {
+      setStep(step + 1);
+    } else {
+      onNext();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-indigo-50 flex items-center justify-center p-4">
+      <div className="bg-white max-w-2xl w-full p-8 rounded-3xl shadow-lg relative">
+        <div className="absolute top-4 right-4 text-gray-400 font-bold">
+          Stap {step + 1} / {REFLECTION_QUESTIONS.length}
+        </div>
+        
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+           <User className="text-indigo-500" /> {question.question}
+        </h2>
+
+        <div className="mb-2 text-sm text-gray-500 font-medium uppercase tracking-wide">Kies wat bij jou past:</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          {question.options.map((opt, idx) => {
+            const isSelected = selectedOptions.includes(opt);
+            return (
+              <button
+                key={idx}
+                onClick={() => onToggleOption(question.id as keyof ReflectionAnswers, opt)}
+                className={`p-4 rounded-xl border-2 text-left transition-all flex justify-between items-center ${
+                  isSelected 
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-bold shadow-md' 
+                    : 'border-gray-200 hover:border-indigo-300 text-gray-600'
+                }`}
+              >
+                {opt}
+                {isSelected && <CheckCircle size={20} className="text-indigo-500"/>}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-500 mb-2 uppercase tracking-wide">Of typ hier je eigen antwoord (max 3 zinnen):</label>
+          <textarea
+            className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-indigo-500 outline-none text-gray-700"
+            rows={5}
+            placeholder={question.placeholder}
+            value={customText}
+            onChange={(e) => onUpdateCustom(question.id, e.target.value)}
+          />
+        </div>
+
+        <div className="flex justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => step > 0 ? setStep(step - 1) : onBack()}
+          >
+            Terug
+          </Button>
+          <Button onClick={handleNext}>
+            {step === REFLECTION_QUESTIONS.length - 1 ? "Naar mijn routekaart" : "Volgende"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [view, setView] = useState<ViewState>('intro');
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
@@ -45,13 +139,56 @@ function App() {
   // User Data State
   const [reflection, setReflection] = useState<ReflectionAnswers>(INITIAL_REFLECTION);
   const [progress, setProgress] = useState<UserProgress>(INITIAL_PROGRESS);
+  
+  // AI Results State
   const [mentorAdvice, setMentorAdvice] = useState<string>("");
   const [loadingAdvice, setLoadingAdvice] = useState(false);
+  const [studyAdvice, setStudyAdvice] = useState<string>("");
+  const [loadingStudy, setLoadingStudy] = useState(false);
+
+  // Load from local storage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('talentenreis_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.reflection) setReflection(parsed.reflection);
+        if (parsed.progress) setProgress(parsed.progress);
+      }
+    } catch (e) {
+      console.error("Failed to load data", e);
+    }
+  }, []);
+
+  // Save to local storage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('talentenreis_data', JSON.stringify({ reflection, progress }));
+    } catch (e) {
+      console.error("Failed to save data", e);
+    }
+  }, [reflection, progress]);
 
   // --- Helpers ---
 
-  const updateReflection = (field: keyof ReflectionAnswers, value: any) => {
-    setReflection(prev => ({ ...prev, [field]: value }));
+  const toggleReflectionOption = (field: keyof ReflectionAnswers, value: string) => {
+    setReflection(prev => {
+      const currentList = prev[field] as string[];
+      const newList = currentList.includes(value) 
+        ? currentList.filter(item => item !== value)
+        : [...currentList, value];
+      return { ...prev, [field]: newList };
+    });
+  };
+
+  const updateCustomAnswer = (questionId: string, value: string) => {
+    setReflection(prev => ({
+      ...prev,
+      customAnswers: {
+        ...prev.customAnswers,
+        [questionId]: value
+      }
+    }));
   };
 
   const handleJobRating = (jobId: string, rating: 'fun' | 'not_fun' | 'unknown') => {
@@ -106,108 +243,20 @@ function App() {
     </div>
   );
 
-  const ReflectionView = () => {
-    const [step, setStep] = useState(0);
-    const question = REFLECTION_QUESTIONS[step];
-
-    const handleNext = () => {
-      if (step < REFLECTION_QUESTIONS.length - 1) {
-        setStep(step + 1);
-      } else {
-        setView('dashboard');
-      }
-    };
-
-    const handleOptionClick = (option: string) => {
-      const currentVal = reflection[question.id as keyof ReflectionAnswers];
-      if (Array.isArray(currentVal)) {
-        // Multi-select logic (toggle)
-        const newArr = currentVal.includes(option) 
-          ? currentVal.filter(o => o !== option)
-          : [...currentVal, option];
-        updateReflection(question.id as keyof ReflectionAnswers, newArr);
-      } else {
-        // Single select logic
-        updateReflection(question.id as keyof ReflectionAnswers, option);
-      }
-    };
-
-    return (
-      <div className="min-h-screen bg-indigo-50 flex items-center justify-center p-4">
-        <div className="bg-white max-w-2xl w-full p-8 rounded-3xl shadow-lg relative">
-          <div className="absolute top-4 right-4 text-gray-400 font-bold">
-            Stap {step + 1} / {REFLECTION_QUESTIONS.length}
-          </div>
-          
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-             <User className="text-indigo-500" /> {question.question}
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {question.options.map((opt, idx) => {
-              const currentVal = reflection[question.id as keyof ReflectionAnswers];
-              const isSelected = Array.isArray(currentVal) 
-                ? currentVal.includes(opt)
-                : currentVal === opt;
-
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleOptionClick(opt)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${
-                    isSelected 
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-bold shadow-md' 
-                      : 'border-gray-200 hover:border-indigo-300 text-gray-600'
-                  }`}
-                >
-                  {opt}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-500 mb-2">Of schrijf je eigen antwoord:</label>
-            <textarea
-              className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-indigo-500 outline-none"
-              rows={2}
-              placeholder={question.placeholder}
-              value={
-                Array.isArray(reflection[question.id as keyof ReflectionAnswers]) 
-                 ? "" // Can't edit array directly in text area for this simple demo
-                 : reflection[question.id as keyof ReflectionAnswers] as string
-              }
-              onChange={(e) => !Array.isArray(reflection[question.id as keyof ReflectionAnswers]) && updateReflection(question.id as keyof ReflectionAnswers, e.target.value)}
-            />
-          </div>
-
-          <div className="flex justify-between">
-            <Button 
-              variant="outline" 
-              onClick={() => step > 0 ? setStep(step - 1) : setView('intro')}
-            >
-              Terug
-            </Button>
-            <Button onClick={handleNext}>
-              {step === REFLECTION_QUESTIONS.length - 1 ? "Naar mijn routekaart" : "Volgende"}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const DashboardView = () => {
     // Determine suggested routes based on very simple keyword matching
     const suggestedRouteIds = ROUTES.filter(route => {
-      const userKeywords = [
+      // Collect all words from reflection
+      const allUserWords = [
         ...reflection.likes,
-        reflection.goodAt,
-        reflection.childhood,
-        reflection.energy
+        ...reflection.goodAt,
+        ...reflection.childhood,
+        ...reflection.energy,
+        ...reflection.whoAmI,
+        ...Object.values(reflection.customAnswers)
       ].join(' ').toLowerCase();
       
-      return route.tags.some(tag => userKeywords.includes(tag.toLowerCase()));
+      return route.tags.some(tag => allUserWords.includes(tag.toLowerCase()));
     }).map(r => r.id);
 
     return (
@@ -405,6 +454,19 @@ function App() {
        setLoadingAdvice(false);
     };
 
+    const getStudyAdviceText = async () => {
+      setLoadingStudy(true);
+      const text = await generateStudyAdvice(reflection, progress);
+      setStudyAdvice(text);
+      setLoadingStudy(false);
+    };
+
+    const formatAnswer = (list: string[], custom: string) => {
+        const all = [...list];
+        if (custom) all.push(custom);
+        return all.length > 0 ? all.join(", ") : "Nog niet ingevuld";
+    };
+
     return (
       <div className="min-h-screen bg-slate-50 p-4 md:p-8">
         <header className="max-w-4xl mx-auto mb-8 flex justify-between items-center">
@@ -422,15 +484,15 @@ function App() {
             <div className="space-y-3">
               <div className="bg-blue-50 p-3 rounded-xl">
                 <span className="text-xs font-bold text-blue-500 uppercase">Ik ben</span>
-                <p className="font-medium">{reflection.whoAmI || "Nog niet ingevuld"}</p>
+                <p className="font-medium">{formatAnswer(reflection.whoAmI, reflection.customAnswers['whoAmI'])}</p>
               </div>
               <div className="bg-purple-50 p-3 rounded-xl">
                 <span className="text-xs font-bold text-purple-500 uppercase">Ik ben goed in</span>
-                <p className="font-medium">{reflection.goodAt || "..."}</p>
+                <p className="font-medium">{formatAnswer(reflection.goodAt, reflection.customAnswers['goodAt'])}</p>
               </div>
               <div className="bg-yellow-50 p-3 rounded-xl">
                 <span className="text-xs font-bold text-yellow-600 uppercase">Energie van</span>
-                <p className="font-medium">{reflection.energy || "..."}</p>
+                <p className="font-medium">{formatAnswer(reflection.energy, reflection.customAnswers['energy'])}</p>
               </div>
             </div>
           </div>
@@ -472,23 +534,50 @@ function App() {
             )}
           </div>
 
-          {/* Mentor / AI Advice */}
+          {/* Mentor / AI Advice: PART 1 - Profile */}
           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 rounded-3xl shadow-lg md:col-span-2 text-white">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">🤖 Jouw Talenten Coach</h2>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Sparkles /> Jouw Talenten Coach</h2>
             {mentorAdvice ? (
               <div className="bg-white/10 p-4 rounded-xl backdrop-blur-sm">
-                 <p className="leading-relaxed">{mentorAdvice}</p>
+                 <p className="leading-relaxed whitespace-pre-wrap mb-4">{mentorAdvice}</p>
+                 {!studyAdvice && !loadingStudy && (
+                   <div className="mt-6 pt-4 border-t border-white/20 text-center">
+                      <p className="mb-3 font-medium">Wil je weten welke opleidingen hierbij passen?</p>
+                      <Button 
+                        onClick={getStudyAdviceText} 
+                        className="bg-emerald-400 text-emerald-950 hover:bg-emerald-300 font-bold"
+                      >
+                         <GraduationCap className="inline mr-2" size={20} /> Bekijk Studie & Toekomst
+                      </Button>
+                   </div>
+                 )}
               </div>
             ) : (
               <div className="text-center py-4">
-                <p className="mb-4">Wil je weten wat jouw keuzes zeggen over jouw toekomst?</p>
+                <p className="mb-4">Benieuwd wat jouw antwoorden zeggen over wie jij bent?</p>
                 <Button 
                     onClick={getRecommendation} 
                     disabled={loadingAdvice}
                     className="bg-white text-indigo-600 hover:bg-gray-100"
                 >
-                  {loadingAdvice ? "Even nadenken..." : "Geef mij advies"}
+                  {loadingAdvice ? "Even nadenken..." : "Maak mijn Talentenprofiel"}
                 </Button>
+              </div>
+            )}
+            
+            {/* Mentor / AI Advice: PART 2 - Study Advice */}
+            {loadingStudy && (
+               <div className="mt-4 bg-white/10 p-4 rounded-xl backdrop-blur-sm text-center animate-pulse">
+                 <p>Coach zoekt passende opleidingen...</p>
+               </div>
+            )}
+            
+            {studyAdvice && (
+              <div className="mt-6 bg-white text-gray-800 p-6 rounded-xl shadow-lg animate-fade-in">
+                 <h3 className="text-2xl font-bold text-emerald-600 mb-4 flex items-center gap-2">
+                    <GraduationCap /> Jouw Toekomst & Studie
+                 </h3>
+                 <p className="leading-relaxed whitespace-pre-wrap">{studyAdvice}</p>
               </div>
             )}
           </div>
@@ -573,7 +662,15 @@ function App() {
   return (
     <div className="font-sans text-gray-900">
       {view === 'intro' && <IntroView />}
-      {view === 'reflection' && <ReflectionView />}
+      {view === 'reflection' && (
+        <ReflectionView 
+          reflection={reflection} 
+          onToggleOption={toggleReflectionOption}
+          onUpdateCustom={updateCustomAnswer}
+          onNext={() => setView('dashboard')}
+          onBack={() => setView('intro')}
+        />
+      )}
       {view === 'dashboard' && <DashboardView />}
       {view === 'route_detail' && <RouteDetailView />}
       {view === 'summary' && <SummaryView />}
@@ -588,6 +685,7 @@ function App() {
                     setReflection(INITIAL_REFLECTION);
                     setProgress(INITIAL_PROGRESS);
                     setView('intro');
+                    localStorage.removeItem('talentenreis_data');
                 }
              }}
              className="bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-50 hover:opacity-100 transition-opacity"

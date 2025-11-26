@@ -8,12 +8,13 @@ export type ViewState =
   | 'mentor';
 
 export interface ReflectionAnswers {
-  whoAmI: string;
+  whoAmI: string[];
   likes: string[];
-  goodAt: string;
-  childhood: string;
-  energy: string;
-  othersSay: string;
+  goodAt: string[];
+  childhood: string[];
+  energy: string[];
+  othersSay: string[];
+  customAnswers: Record<string, string>; // Stores text input separately
 }
 
 export interface Job {
