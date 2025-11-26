@@ -300,10 +300,15 @@ function App() {
 
     return (
       <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
-        <header className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Kies jouw Route 🌍</h1>
-            <p className="text-gray-600">Klik op een tegel om de wereld te ontdekken.</p>
+        <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-4">
+             <Button variant="outline" onClick={() => setView('reflection')} className="shrink-0" title="Terug naar vragen">
+                <ArrowLeft size={20} />
+             </Button>
+             <div>
+                <h1 className="text-3xl font-bold text-gray-800">Kies jouw Route 🌍</h1>
+                <p className="text-gray-600">Klik op een tegel om de wereld te ontdekken.</p>
+             </div>
           </div>
           <Button variant="secondary" onClick={() => setView('summary')}>
             Mijn Paspoort
